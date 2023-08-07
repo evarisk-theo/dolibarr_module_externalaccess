@@ -81,7 +81,7 @@ class TasksController extends Controller
 		$langs->load('projects', 'main');
 
 
-		$sql = 'SELECT p.rowid as p_rowid, t.rowid as t_rowid, SUM(ptt.task_duration) as timespent ';
+		$sql = 'SELECT p.rowid as p_rowid, t.rowid as t_rowid';
 
 		// Add fields from hooks
 		$parameters = array();
@@ -90,27 +90,25 @@ class TasksController extends Controller
 
 		$sql.= ' FROM '.MAIN_DB_PREFIX.'projet as p';
 		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'projet_task as t ON p.rowid=t.fk_projet';
-		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'projet_task_time as ptt ON t.rowid=ptt.fk_task';
-//		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'element_contact as ct ON ct.element_id=p.rowid';
-//		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'c_type_contact as cct ON cct.rowid=ct.fk_c_type_contact';
-//		$sql.= '  AND  cct.element=\'project\' AND cct.source=\'external\'';
-//		$sql.= '  AND  ct.fk_socpeople='.(int) $contactId;
+		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'element_contact as ct ON ct.element_id=p.rowid';
+		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'c_type_contact as cct ON cct.rowid=ct.fk_c_type_contact';
+		$sql.= '  AND  cct.element=\'project\' AND cct.source=\'external\'';
+		$sql.= '  AND  ct.fk_socpeople='.(int) $contactId;
 
 		// Add From from hooks
 		$parameters = array();
 		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters); // Note that $action and $object may have been modified by hook
 		$sql .= $hookmanager->resPrint;
-//
-//		$sql.= ' WHERE p.fk_soc = '. intval($socId);
-//		$sql.= ' AND p.fk_statut = '.Project::STATUS_VALIDATED;
-//		$sql.= ' AND p.entity IN ('.getEntity("project").')';//Compatibility with Multicompany
+
+		$sql.= ' WHERE p.fk_soc = '. intval($socId);
+		$sql.= ' AND p.fk_statut = '.Project::STATUS_VALIDATED;
+		$sql.= ' AND p.entity IN ('.getEntity("project").')';//Compatibility with Multicompany
 
 		// Add where from hooks
 		$parameters = array();
 		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters); // Note that $action and $object may have been modified by hook
 		$sql .= $hookmanager->resPrint;
 
-		$sql.= ' GROUP BY p.rowid';
 		$sql.= ' ORDER BY p.ref,t.rang DESC';
 
 		$tableItems = $context->dbTool->executeS($sql);
@@ -299,10 +297,11 @@ class TasksController extends Controller
 				}
 				if (!empty($TFieldsCols['t.timespent']['status'])) {
 					$timespent = '';
-					if (!empty($item->timespent != '')) {
-						$timespent = convertSecondToTime($item->timespent, 'allhourmin');
+					if (!empty($task->duration_effective != '')) {
+						$timespent = convertSecondToTime($task->duration_effective, 'allhourmin');
 					}
 					print ' <td class="t_timespent_value text-center" data-search="' . $timespent . '" data-order="' . $timespent . '"  ><a href="'. $_SERVER['PHP_SELF'] . '?controller=timespent&ctoken='. GETPOST('ctoken') . '&id=' . $task->id .'">' . $timespent . '</a></td>';
+//					print ' <td class="t_timespent_value text-center" data-search="' . $timespent . '" data-order="' . $timespent . '"  ><a href="'. $_SERVER['PHP_SELF'] . '?controller=timespent&ctoken='. GETPOST('ctoken') . '&id=' . $task->id .'">' . $timespent . '</a></td>';
 				}
 				print '</tr>';
 			}
