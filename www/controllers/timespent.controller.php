@@ -3,7 +3,7 @@
 /**
  * Class TasksController
  */
-class TasksController extends Controller
+class TimeSpentController extends Controller
 {
 
 	/**
@@ -30,8 +30,8 @@ class TasksController extends Controller
 		$context = Context::getInstance();
 		if (!$context->controllerInstance->checkAccess()) { return; }
 
-		$context->title = $langs->trans('ViewTasks');
-		$context->desc = $langs->trans('ViewTasksDesc');
+		$context->title = $langs->trans('ViewTimeSpent');
+		$context->desc = $langs->trans('ViewTimeSpentDesc');
 		$context->menu_active[] = 'tasks';
 
 		$hookRes = $this->hookDoAction();
@@ -55,7 +55,7 @@ class TasksController extends Controller
 		$hookRes = $this->hookPrintPageView();
 		if (empty($hookRes)){
 			print '<section id="section-task"><div class="container">';
-			$this->printProjectTaskTable($user->socid, $user->contact_id);
+			$this->printTaskTimeSpentTable($user->socid, $user->contact_id);
 			print '</div></section>';
 		}
 
@@ -67,7 +67,7 @@ class TasksController extends Controller
 	 * @param int $contactId contactId
 	 * @return void
 	 */
-	public function printProjectTaskTable($socId = 0, $contactId = 0)
+	public function printTaskTimeSpentTable($socId = 0, $contactId = 0)
 	{
 		global $langs, $db, $conf, $hookmanager;
 		$context = Context::getInstance();
@@ -80,17 +80,16 @@ class TasksController extends Controller
 
 		$langs->load('projects', 'main');
 
+		$taskId = GETPOST('id');
 
-		$sql = 'SELECT p.rowid as p_rowid, t.rowid as t_rowid, SUM(ptt.task_duration) as timespent ';
+		$sql = 'SELECT ptt.task_duration, ptt.task_datehour';
 
 		// Add fields from hooks
 		$parameters = array();
 		$reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters); // Note that $action and $object may have been modified by hook
 		$sql .= $hookmanager->resPrint;
 
-		$sql.= ' FROM '.MAIN_DB_PREFIX.'projet as p';
-		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'projet_task as t ON p.rowid=t.fk_projet';
-		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'projet_task_time as ptt ON t.rowid=ptt.fk_task';
+		$sql.= ' FROM '.MAIN_DB_PREFIX.'projet_task_time as ptt';
 //		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'element_contact as ct ON ct.element_id=p.rowid';
 //		$sql.= ' INNER JOIN '.MAIN_DB_PREFIX.'c_type_contact as cct ON cct.rowid=ct.fk_c_type_contact';
 //		$sql.= '  AND  cct.element=\'project\' AND cct.source=\'external\'';
@@ -101,7 +100,8 @@ class TasksController extends Controller
 		$reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters); // Note that $action and $object may have been modified by hook
 		$sql .= $hookmanager->resPrint;
 //
-//		$sql.= ' WHERE p.fk_soc = '. intval($socId);
+		$sql.= ' WHERE ptt.fk_task = '. $taskId;
+//		$sql.= ' AND p.fk_soc = '. intval($socId);
 //		$sql.= ' AND p.fk_statut = '.Project::STATUS_VALIDATED;
 //		$sql.= ' AND p.entity IN ('.getEntity("project").')';//Compatibility with Multicompany
 
@@ -110,38 +110,14 @@ class TasksController extends Controller
 		$reshook = $hookmanager->executeHooks('printFieldListWhere', $parameters); // Note that $action and $object may have been modified by hook
 		$sql .= $hookmanager->resPrint;
 
-		$sql.= ' GROUP BY p.rowid';
-		$sql.= ' ORDER BY p.ref,t.rang DESC';
+		$sql.= ' ORDER BY ptt.task_datehour DESC';
 
 		$tableItems = $context->dbTool->executeS($sql);
 
 		if (!empty($tableItems))
 		{
-			//TODO : ajouter la variable $dataTableConf en paramètre du hook => résoudre le souci de "order"
-			//      $dataTableConf = array(
-			//          'language' => array(
-			//              'url' => $context->getControllerUrl() . 'vendor/data-tables/french.json',
-			//          ),
-			//          'order' => array(),
-			//          'responsive' => true,
-			//          'columnDefs' => array(
-			//              array(
-			//                  'orderable' => false,
-			//                  'aTargets' => array(-1),
-			//              ),
-			//              array(
-			//                  'bSearchable' => false,
-			//                  'aTargets' => array(-1, -2),
-			//              ),
-			//          ),
-			//      );
 
 			$TFieldsCols = array(
-				'p.ref' => array('status' => true),
-				'p.title' => array('status' => true),
-				/*'p.dateo' => array('status' => true),
-				'p.datee' => array('status' => true),*/
-				'p.fk_statut' => array('status' => true),
 				't.ref' => array('status' => true),
 				't.label' => array('status' => true),
 				't.dateo' => array('status' => true),
@@ -185,28 +161,6 @@ class TasksController extends Controller
 
 			print '<tr>';
 
-			if (!empty($TFieldsCols['p.ref']['status'])){
-				print ' <th class="text-center" >'.$langs->trans('Ref').'</th>';
-			}
-			if (!empty($TFieldsCols['p.title']['status'])) {
-				print ' <th class="p_title_title text-center" >' . $langs->trans('Project').' '.$langs->trans('Title') . '</th>';
-			}
-
-			if (!empty($TOther_fields)) {
-				foreach ($TOther_fields as $field) {
-					//if ($field === 'ref_client' && !isset($object->field)) $field = 'ref_customer';
-					if (property_exists('Project', $field) || strstr($field, 'linked'))
-					{
-						print ' <th class="'.$field.'_title text-center" >'.$langs->trans($field).'</th>';
-					}
-				}
-			}
-			if (!empty($TFieldsCols['p.dateo']['status'])) {
-				print ' <th class="p_dated_title text-center" >' . $langs->trans('Project').' '.$langs->trans('DateStart') . '</th>';
-			}
-			if (!empty($TFieldsCols['p.datee']['status'])) {
-				print ' <th class="p_datee_title text-center" >' . $langs->trans('Project').' '.$langs->trans('DateEnd') . '</th>';
-			}
 			if (!empty($TFieldsCols['t.ref']['status'])) {
 				print ' <th class="t_ref_title text-center" >' . $langs->trans('Task').' '.$langs->trans('Ref') . '</th>';
 			}
@@ -235,42 +189,12 @@ class TasksController extends Controller
 			print '<tbody>';
 			foreach ($tableItems as $item)
 			{
-				$project = new Project($db);
-				$project->fetch($item->p_rowid);
-				$project->fetchObjectLinked();
-
 				$task = new Task($db);
-				$task->fetch($item->t_rowid);
+				$task->fetch($taskId);
 				$task->fetchObjectLinked();
 
 				print '<tr>';
 
-				if (!empty($TFieldsCols['p.ref']['status'])) {
-					print ' <td class="p_ref_value" data-search="' . $project->ref . '" data-order="' . $project->ref . '"  >' . $project->ref . '</td>';
-				}
-
-				$total_more_fields = 0;
-				if (!empty($TOther_fields)) {
-					foreach ($TOther_fields as $field) {
-						if (property_exists('Projet', $field)) {
-							$total_more_fields+=1;
-							if ($field =='budget_amount') {
-								print ' <td class="'.$field.'_value" data-search="' . strip_tags($field) . '" data-order="' . strip_tags($field) . '" >' . price($project->{$field}) . '</td>';
-							} else {
-								print ' <td class="'.$field.'_value" data-search="' . strip_tags($project->{$field}) . '" data-order="' . strip_tags($project->{$field}) . '" >' . $project->{$field} . '</td>';
-							}
-						}
-					}
-				}
-				if (!empty($TFieldsCols['p.title']['status'])) {
-					print ' <td class="p_title_valuetext-center " data-search="' . dol_string_nospecial($project->title) . '" data-order="' . dol_string_nospecial($project->title) . '"  >' . $project->title . '</td>';
-				}
-				/*if (!empty($TFieldsCols['p.dateo']['status'])) {
-					print ' <td class="p_dateo_value text-center" data-search="' . dol_print_date($project->date_start) . '" data-order="' . $project->date_start . '"  >' . dol_print_date($project->date_start) . '</td>';
-				}
-				if (!empty($TFieldsCols['p.datee']['status'])) {
-					print ' <td class="p_datee_value text-center" data-search="' . dol_print_date($project->date_end) . '" data-order="' . $project->date_end . '"  >' . dol_print_date($project->date_end) . '</td>';
-				}*/
 				if (!empty($TFieldsCols['t.ref']['status'])) {
 					print ' <td class="t_ref_value text-center" data-search="' . $task->ref . '" data-order="' . $task->ref . '"  >' . $task->ref . '</td>';
 				}
@@ -299,10 +223,10 @@ class TasksController extends Controller
 				}
 				if (!empty($TFieldsCols['t.timespent']['status'])) {
 					$timespent = '';
-					if (!empty($item->timespent != '')) {
-						$timespent = convertSecondToTime($item->timespent, 'allhourmin');
+					if (!empty($item->task_duration != '')) {
+						$timespent = convertSecondToTime($item->task_duration  , 'allhourmin');
 					}
-					print ' <td class="t_timespent_value text-center" data-search="' . $timespent . '" data-order="' . $timespent . '"  ><a href="'. $_SERVER['PHP_SELF'] . '?controller=timespent&ctoken='. GETPOST('ctoken') . '&id=' . $task->id .'">' . $timespent . '</a></td>';
+					print ' <td class="t_timespent_value text-center" data-search="' . $timespent . '" data-order="' . $timespent . '"  >' . $timespent . '</td>';
 				}
 				print '</tr>';
 			}

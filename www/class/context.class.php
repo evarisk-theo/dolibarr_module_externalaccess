@@ -146,6 +146,7 @@ class Context
 		$this->addControllerDefinition('propals', $defaultControllersPath.'propals.controller.php', 'PropalsController');
 		$this->addControllerDefinition('projects', $defaultControllersPath.'projects.controller.php', 'ProjectsController');
 		$this->addControllerDefinition('tasks', $defaultControllersPath.'tasks.controller.php', 'TasksController');
+		$this->addControllerDefinition('timespent', $defaultControllersPath.'timespent.controller.php', 'TimeSpentController');
 		$this->addControllerDefinition('expeditions', $defaultControllersPath.'expeditions.controller.php', 'ExpeditionsController');
 		$this->addControllerDefinition('supplier_invoices', $defaultControllersPath.'supplier_invoices.controller.php', 'SupplierInvoicesController');
 		$this->addControllerDefinition('tickets', $defaultControllersPath.'tickets.controller.php', 'TicketsController');
